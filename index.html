@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bumper Pool Odds</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#f5f7fa;padding:2rem}
+    .card{background:#fff;max-width:540px;margin:auto;padding:2rem;border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    h1{margin-top:0;text-align:center;font-size:1.75rem}
+    label{display:block;margin-top:1.25rem;font-weight:600}
+    input[type=text],select{width:100%;padding:.6rem 1rem;border:1px solid #cbd5e1;border-radius:12px;font-size:1rem}
+    .info{display:block;font-size:.8rem;font-weight:400;color:#64748b;margin-top:.25rem}
+    .radio-group,.checkbox-group{display:flex;gap:1rem;margin-top:.5rem}
+    .radio-group label,.checkbox-group label{font-weight:500;display:flex;align-items:center;gap:.35rem;cursor:pointer}
+    button{margin-top:2rem;width:100%;padding:.8rem;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:1.05rem;font-weight:600;cursor:pointer;transition:background .2s}
+    button:hover{background:#1e4fca}
+    #results{margin-top:2.25rem}
+    #results pre{background:#f1f5f9;padding:1rem;border-radius:12px;overflow:auto;font-size:.9rem}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎱 Bumper Pool Odds</h1>
+    <form id="oddsForm">
+      <label for="playerA">Player A Name
+        <span class="info">(Player A breaks from the chosen side)</span>
+      </label>
+      <input type="text" id="playerA" placeholder="e.g. Austin" required />
+
+      <label for="playerB">Player B Name</label>
+      <input type="text" id="playerB" placeholder="e.g. Brett" required />
+
+      <label>Break Side for Player A</label>
+      <div class="radio-group">
+        <label><input type="radio" name="breakSide" value="Window Side" checked /> Window Side</label>
+        <label><input type="radio" name="breakSide" value="TV Side" /> TV Side</label>
+      </div>
+
+      <label for="inebriated">Players Drinking?</label>
+      <select id="inebriated">
+        <option value="Yes" selected>Yes</option>
+        <option value="No">No</option>
+      </select>
+
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="vig" /> Include vig (5%)</label>
+      </div>
+
+      <button type="submit">Calculate Odds</button>
+    </form>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    // --- Configuration ---
+    // API endpoint deployed from the updated Python script (FastAPI / Flask etc.)
+    const API_URL = "https://your-bumper-pool-api.onrender.com/predict";
+
+    document.getElementById("oddsForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const playerA = document.getElementById("playerA").value.trim();
+      const playerB = document.getElementById("playerB").value.trim();
+      const breakSide = document.querySelector("input[name='breakSide']:checked").value;
+      const inebriated = document.getElementById("inebriated").value;
+      const vig = document.getElementById("vig").checked;
+
+      const params = new URLSearchParams({
+        playerA,
+        playerB,
+        break_side: breakSide,
+        inebriated,
+        vig: vig ? "true" : "false"
+      }).toString();
+
+      try {
+        const res = await fetch(`${API_URL}?${params}`);
+        if (!res.ok) throw new Error(`API error (${res.status})`);
+        const data = await res.json();
+        document.getElementById("results").innerHTML = `<h2>Results</h2><pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (err) {
+        document.getElementById("results").innerHTML = `<p style='color:#dc2626'>⚠️ Could not fetch odds: ${err.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>
