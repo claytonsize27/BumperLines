@@ -1,96 +1,56 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
   <title>Bumper Pool Odds</title>
-  <style>
-    body { font-family: sans-serif; padding: 2rem; background: #f8fafc; }
-    .card { max-width: 600px; margin: auto; background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h1 { text-align: center; }
-    label { display: block; margin-top: 1rem; font-weight: bold; }
-    input, select { width: 100%; padding: 0.5rem; margin-top: 0.25rem; border-radius: 8px; border: 1px solid #ccc; }
-    .options { display: flex; gap: 1rem; margin-top: 0.5rem; }
-    .options label { font-weight: normal; }
-    button { margin-top: 1.5rem; padding: 0.75rem; width: 100%; border: none; border-radius: 8px; background: #2563eb; color: white; font-size: 1rem; font-weight: bold; cursor: pointer; }
-    #results { margin-top: 2rem; white-space: pre-wrap; background: #f1f5f9; padding: 1rem; border-radius: 8px; font-family: monospace; }
-    .error { color: red; font-weight: bold; margin-top: 1rem; }
-  </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🎱 Bumper Pool Odds</h1>
-    <form id="oddsForm">
-      <label>Player A Name</label>
-      <input type="text" id="playerA" required />
-      <label>Player B Name</label>
-      <input type="text" id="playerB" required />
-      <label>Break Side for Player A</label>
-      <div class="options">
-        <label><input type="radio" name="breakSide" value="Window Side" checked /> Window Side</label>
-        <label><input type="radio" name="breakSide" value="TV Side" /> TV Side</label>
-      </div>
-      <label>Players Drinking?</label>
-      <select id="inebriated">
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-      <div class="options">
-        <label><input type="checkbox" id="vig" /> Include Vig</label>
-      </div>
-      <button type="submit">Calculate Odds</button>
-    </form>
-    <div id="results"></div>
-    <div class="error" id="errorMessage"></div>
-  </div>
+  <h2>Bumper Pool Predictor 🎱</h2>
+  <form id="predict-form">
+    Player A: <input name="playerA" required><br>
+    Player B: <input name="playerB" required><br>
+    Break Side:
+    <select name="break_side">
+      <option>Window Side</option>
+      <option>TV Side</option>
+    </select><br>
+    Inebriated:
+    <select name="inebriated">
+      <option>Yes</option>
+      <option>No</option>
+    </select><br>
+    Include Vig? <input type="checkbox" name="vig"><br>
+    <button type="submit">Calculate</button>
+  </form>
+
+  <pre id="results"></pre>
 
   <script>
-    const API_URL = "https://bumper-pool-api.onrender.com/predict";
+    const form = document.getElementById("predict-form");
+    const results = document.getElementById("results");
 
-    document.getElementById("oddsForm").addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      document.getElementById("results").textContent = "";
-      document.getElementById("errorMessage").textContent = "";
+      const data = new FormData(form);
+      const params = new URLSearchParams();
 
-      const playerA = document.getElementById("playerA").value;
-      const playerB = document.getElementById("playerB").value;
-      const breakSide = document.querySelector("input[name='breakSide']:checked").value;
-      const inebriated = document.getElementById("inebriated").value;
-      const vig = document.getElementById("vig").checked;
+      for (const [key, value] of data.entries()) {
+        if (key === "vig") {
+          params.append("vig", "true");
+        } else {
+          params.append(key, value);
+        }
+      }
 
-      const query = new URLSearchParams({
-        playerA,
-        playerB,
-        break_side: breakSide,
-        inebriated,
-        vig
-      });
+      const url = "https://bumper-pool-api.onrender.com/predict?" + params.toString();
 
       try {
-        const res = await fetch(`${API_URL}?${query.toString()}`);
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`API responded with status ${res.status}`);
-        const data = await res.json();
-
-        const ml = data.moneyline;
-        const sw = data.sweep_odds;
-        const pm = data.predicted_margin;
-
-        document.getElementById("results").innerText = `
-💰 Moneyline Odds
-- ${playerA}: ${ml[playerA]} (p = ${(ml.probabilities[playerA] * 100).toFixed(1)}%)
-- ${playerB}: ${ml[playerB]} (p = ${(ml.probabilities[playerB] * 100).toFixed(1)}%)
-
-🧹 Sweep Odds (5–0 win)
-- ${playerA}: ${sw[playerA]}
-- ${playerB}: ${sw[playerB]}
-
-📏 Predicted Spread
-- Winner: ${pm.winner}
-- Loser: ${pm.loser}
-- Expected Margin: ${pm.margin.toFixed(1)} balls
-        `;
+        const json = await res.json();
+        results.textContent = JSON.stringify(json, null, 2);
       } catch (err) {
-        console.error("Fetch error:", err);
-        document.getElementById("errorMessage").textContent = "Failed to fetch odds. See console for details.";
+        results.textContent = "Fetch error: " + err;
       }
     });
   </script>
