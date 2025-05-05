@@ -2,89 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bumper Pool Odds</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bumper Pool Odds Calculator</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f7f9fc;
-      color: #333;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      background: #f4f4f4;
     }
     h1 {
       text-align: center;
-      color: #111;
+    }
+    form {
+      max-width: 600px;
+      margin: auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     label {
-      font-weight: bold;
       display: block;
-      margin-top: 20px;
+      margin-top: 1rem;
     }
-    input[type="text"], select {
+    input, select {
       width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
     }
     .radio-group {
       display: flex;
-      gap: 20px;
-      margin-top: 5px;
-    }
-    .radio-group label {
-      font-weight: normal;
+      gap: 1rem;
+      margin-top: 0.5rem;
     }
     button {
-      background-color: #007bff;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background-color: #007BFF;
       color: white;
-      padding: 12px;
       border: none;
-      border-radius: 6px;
-      font-size: 16px;
+      border-radius: 5px;
       cursor: pointer;
     }
     button:hover {
       background-color: #0056b3;
     }
     #results {
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 20px;
-      white-space: pre-wrap;
+      margin-top: 2rem;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
     }
     table {
-      border-collapse: collapse;
       width: 100%;
-      margin-top: 10px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
+      margin-top: 1rem;
+      border-collapse: collapse;
     }
     th, td {
+      border: 1px solid #ddd;
+      padding: 0.5rem;
       text-align: center;
-      padding: 8px;
     }
     th {
-      background-color: #f1f1f1;
+      background-color: #f2f2f2;
     }
   </style>
 </head>
 <body>
-  <h1>🎱 Bumper Pool Predictor</h1>
-  <form id="predict-form">
-    <label for="playerA">Player A (breaking):</label>
-    <input type="text" name="playerA" required />
+  <h1>🎱 Bumper Pool Odds Calculator</h1>
+  <form id="oddsForm">
+    <label for="playerA">Player A (this person is breaking):</label>
+    <input type="text" id="playerA" required />
 
     <label for="playerB">Player B:</label>
-    <input type="text" name="playerB" required />
+    <input type="text" id="playerB" required />
 
     <label>Which side is Player A breaking from?</label>
     <div class="radio-group">
@@ -92,83 +87,59 @@
       <label><input type="radio" name="break_side" value="TV Side" /> TV Side</label>
     </div>
 
-    <label>Are the players inebriated?</label>
+    <label>Are players inebriated?</label>
     <div class="radio-group">
       <label><input type="radio" name="inebriated" value="Yes" checked /> Yes</label>
       <label><input type="radio" name="inebriated" value="No" /> No</label>
     </div>
 
-    <label><input type="checkbox" name="vig" /> Include Vig</label><br><br>
+    <label><input type="checkbox" id="vig" /> Include Vig (Sportsbook Tax)</label>
 
-    <button type="submit">Calculate Odds</button>
+    <button type="submit">Calculate</button>
   </form>
 
   <div id="results"></div>
 
   <script>
-    const form = document.getElementById("predict-form");
-    const results = document.getElementById("results");
+    const form = document.getElementById("oddsForm");
+    const resultsDiv = document.getElementById("results");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      results.textContent = "Loading odds...";
-      const formData = new FormData(form);
-      const params = new URLSearchParams();
+      resultsDiv.innerHTML = "Calculating...";
 
-      for (const [key, value] of formData.entries()) {
-        if (key === "vig") {
-          params.append("vig", "true");
-        } else {
-          params.append(key, value);
-        }
-      }
-
-      const url = "https://bumper-pool-api.onrender.com/predict?" + params.toString();
+      const playerA = document.getElementById("playerA").value;
+      const playerB = document.getElementById("playerB").value;
+      const break_side = document.querySelector("input[name='break_side']:checked").value;
+      const inebriated = document.querySelector("input[name='inebriated']:checked").value;
+      const vig = document.getElementById("vig").checked;
 
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`API responded with status ${res.status}`);
-        const data = await res.json();
+        const response = await fetch(`https://bumper-pool-api.onrender.com/predict?playerA=${playerA}&playerB=${playerB}&break_side=${break_side}&inebriated=${inebriated}&vig=${vig}`);
+        if (!response.ok) throw new Error("API responded with status " + response.status);
+        const data = await response.json();
 
-        const pA = Object.keys(data.moneyline)[0];
-        const pB = Object.keys(data.moneyline)[1];
-        const probA = data.moneyline.probabilities[pA];
-        const probB = data.moneyline.probabilities[pB];
-        const mlA = data.moneyline[pA];
-        const mlB = data.moneyline[pB];
-        const sweepA = data.sweep_odds[pA];
-        const sweepB = data.sweep_odds[pB];
-        const winner = data.predicted_margin.winner;
-        const loser = data.predicted_margin.loser;
-        const margin = data.predicted_margin.margin;
+        let html = `<h2>Results</h2>`;
+        html += `<p><strong>Moneyline Odds:</strong><br>${playerA}: ${data.moneyline[playerA]} (${(data.moneyline.probabilities[playerA] * 100).toFixed(1)}%)<br>${playerB}: ${data.moneyline[playerB]} (${(data.moneyline.probabilities[playerB] * 100).toFixed(1)}%)</p>`;
 
-        let marginHTML = `
-        <h3>🎯 Win Margin Odds for ${winner}</h3>
-        <table>
-          <tr><th>Wins by</th><th>Probability</th><th>Odds</th></tr>
-        `;
+        html += `<p><strong>Predicted Margin:</strong><br>${data.predicted_margin.winner} is expected to beat ${data.predicted_margin.loser} by ${data.predicted_margin.margin} balls.</p>`;
 
-        for (const [balls, entry] of Object.entries(data.margin_distribution)) {
-          marginHTML += `<tr><td>${balls} balls</td><td>${(entry.probability * 100).toFixed(1)}%</td><td>${entry.odds}</td></tr>`;
+        html += `<p><strong>Sweep Odds (5-0):</strong><br>${playerA}: ${data.sweep_odds[playerA]}<br>${playerB}: ${data.sweep_odds[playerB]}</p>`;
+
+        const margin = data.margin_distribution;
+
+        html += `<h3>🎯 Win Margin Odds (1-5 Balls)</h3>`;
+
+        html += `<table><thead><tr><th>Win By</th><th>${playerA} %</th><th>${playerA} Odds</th><th>${playerB} %</th><th>${playerB} Odds</th></tr></thead><tbody>`;
+        for (let i = 1; i <= 5; i++) {
+          const row = margin[i.toString()];
+          html += `<tr><td>${i}</td><td>${(row[`${playerA}_probability`] * 100).toFixed(1)}%</td><td>${row[`${playerA}_odds`]}</td><td>${(row[`${playerB}_probability`] * 100).toFixed(1)}%</td><td>${row[`${playerB}_odds`]}</td></tr>`;
         }
-        marginHTML += `</table>`;
+        html += `</tbody></table>`;
 
-        results.innerHTML = `
-<b>Results:</b><br><br>
-<b>${pA}</b> has a ${(probA * 100).toFixed(1)}% chance to win (Moneyline: ${mlA})<br>
-<b>${pB}</b> has a ${(probB * 100).toFixed(1)}% chance to win (Moneyline: ${mlB})<br><br>
-
-<b>Predicted Margin:</b><br>
-<b>${winner}</b> is expected to beat <b>${loser}</b> by <b>${margin} balls</b>.<br><br>
-
-<b>Sweep Odds (win 5-0):</b><br>
-<b>${pA}</b>: ${sweepA}<br>
-<b>${pB}</b>: ${sweepB}<br><br>
-
-${marginHTML}
-        `;
+        resultsDiv.innerHTML = html;
       } catch (err) {
-        results.textContent = "❌ Error: " + err.message;
+        resultsDiv.innerHTML = `<p style="color:red;">Fetch error: ${err}</p>`;
       }
     });
   </script>
